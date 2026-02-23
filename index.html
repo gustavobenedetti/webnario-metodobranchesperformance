@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aula Gratuita — Branches Performance</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #111111;
+  --surface: #1c1c1c;
+  --border: #333333;
+  --green: #2ecc71;
+  --green-dim: rgba(46,204,113,.12);
+  --green-glow: rgba(46,204,113,.3);
+  --red: #e53935;
+  --red-dim: rgba(229,57,53,.12);
+  --text: #f5f5f5;
+  --muted: #888888;
+  --label: #cccccc;
+  --font: Arial, Helvetica, sans-serif;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* TOPBAR */
+.topbar {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(17,17,17,.96);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 20px; height: 56px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+}
+
+.cdot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red); flex-shrink: 0;
+  animation: blink 1.4s ease infinite;
+}
+
+@keyframes blink { 0%,100%{opacity:1}50%{opacity:.2} }
+
+.countdown { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.ctimer { font-family: var(--font); font-weight: 700; color: var(--text); font-size: 14px; letter-spacing: .06em; }
+
+/* HERO */
+.hero {
+  position: relative; padding: 60px 20px 52px;
+  overflow: hidden; text-align: center;
+}
+
+.hero-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 80% 55% at 50% 0%, rgba(46,204,113,.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 90% 90%, rgba(229,57,53,.05) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.hero-bg::after {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--green), transparent); opacity: .35;
+}
+
+.hero-inner { position: relative; max-width: 680px; margin: 0 auto; }
+
+.urgency-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--red-dim); border: 1px solid rgba(229,57,53,.35); border-radius: 100px;
+  padding: 7px 18px; font-size: 11px; font-weight: 700; color: var(--red);
+  letter-spacing: .1em; text-transform: uppercase; margin-bottom: 20px;
+  animation: fadeUp .45s ease both;
+}
+
+.date-badge {
+  display: inline-block;
+  background: var(--green-dim); border: 1px solid rgba(46,204,113,.3); border-radius: 8px;
+  padding: 10px 22px; font-size: 15px; font-weight: 700; color: var(--green);
+  margin-bottom: 24px; animation: fadeUp .45s .05s ease both;
+}
+
+h1 {
+  font-family: var(--font); font-size: clamp(30px, 8vw, 54px); font-weight: 900;
+  line-height: 1.05; letter-spacing: -.02em; margin-bottom: 20px;
+  animation: fadeUp .45s .1s ease both;
+}
+
+.red { color: var(--red); }
+.green { color: var(--green); }
+
+.hero-sub {
+  font-size: clamp(15px, 3vw, 17px); color: var(--label); line-height: 1.7;
+  max-width: 520px; margin: 0 auto;
+  animation: fadeUp .45s .15s ease both;
+}
+
+.hero-sub strong { color: var(--text); }
+
+/* FORM SECTION */
+.form-section { padding: 40px 20px 0; animation: fadeUp .5s .25s ease both; }
+
+.form-card {
+  max-width: 520px; margin: 0 auto;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 32px 28px; position: relative; overflow: hidden;
+}
+
+.form-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: linear-gradient(90deg, var(--red), var(--green));
+}
+
+.form-title { font-family: var(--font); font-size: 20px; font-weight: 900; margin-bottom: 5px; text-align: center; }
+.form-subtitle { font-size: 13px; color: var(--muted); text-align: center; margin-bottom: 20px; }
+
+.respondi-wrap { border-radius: 8px; overflow: hidden; }
+
+.microcopy {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin-top: 14px; font-size: 11px; color: var(--muted); text-align: center; flex-wrap: wrap;
+}
+.microcopy span::before { content: '·'; margin-right: 6px; }
+.microcopy span:first-child::before { content: ''; margin: 0; }
+
+/* ─── OBRIGADO + WHATSAPP — aparece só após envio ─── */
+.thankyou-section {
+  display: none;
+  max-width: 520px;
+  margin: 0 auto;
+  text-align: center;
+  padding: 0 20px;
+  animation: popIn .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+@keyframes popIn {
+  from { opacity: 0; transform: scale(.92) translateY(16px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.thankyou-box {
+  background: var(--surface); border: 1px solid rgba(46,204,113,.3); border-radius: 16px;
+  padding: 36px 28px; margin-bottom: 16px; position: relative; overflow: hidden;
+}
+
+.thankyou-box::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+  background: var(--green);
+}
+
+.check-icon {
+  width: 60px; height: 60px; border-radius: 50%;
+  background: var(--green-dim); border: 2px solid var(--green);
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 18px; font-size: 26px;
+}
+
+.thankyou-title {
+  font-family: var(--font); font-size: 22px; font-weight: 900;
+  margin-bottom: 10px; color: var(--text);
+}
+
+.thankyou-sub {
+  font-size: 14px; color: var(--label); line-height: 1.65; margin-bottom: 28px;
+}
+
+.thankyou-sub strong { color: var(--text); }
+
+.btn-wa-big {
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  background: #25D366; color: #fff;
+  font-family: var(--font); font-weight: 700; font-size: 17px;
+  padding: 18px 32px; border-radius: 12px; text-decoration: none;
+  box-shadow: 0 6px 32px rgba(37,211,102,.35);
+  transition: transform .15s, box-shadow .15s;
+  width: 100%;
+}
+
+.btn-wa-big:hover { transform: translateY(-2px); box-shadow: 0 8px 44px rgba(37,211,102,.5); }
+
+.wa-hint {
+  font-size: 12px; color: var(--muted); margin-top: 12px;
+}
+
+/* DIVIDER */
+.divline { height: 1px; background: linear-gradient(90deg, transparent, var(--border), transparent); margin: 52px 20px 0; }
+
+/* SECTIONS */
+section { padding: 52px 20px; max-width: 720px; margin: 0 auto; }
+
+.stag {
+  display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--red); margin-bottom: 10px;
+}
+
+h2 {
+  font-family: var(--font); font-size: clamp(24px, 5vw, 36px); font-weight: 900;
+  letter-spacing: -.02em; line-height: 1.1; margin-bottom: 30px;
+}
+
+/* LEARN */
+.learn-grid { display: grid; gap: 14px; }
+
+.learn-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 22px; display: flex; gap: 16px; align-items: flex-start;
+  transition: border-color .2s;
+}
+.learn-card:hover { border-color: var(--green); }
+
+.learn-icon {
+  width: 46px; height: 46px; border-radius: 10px;
+  background: var(--green-dim); border: 1px solid rgba(46,204,113,.2);
+  display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0;
+}
+
+.learn-title { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+.learn-desc { font-size: 14px; color: var(--label); line-height: 1.65; }
+
+/* FOR WHO */
+.forwho-wrap {
+  background: var(--surface); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+  padding: 52px 20px;
+}
+.forwho-inner { max-width: 720px; margin: 0 auto; }
+.forwho-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+@media (max-width: 560px) { .forwho-grid { grid-template-columns: 1fr; } }
+
+.forwho-col h3 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+.forwho-col.is h3 { color: var(--green); }
+.forwho-col.not h3 { color: var(--red); }
+
+.flist { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.flist li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--label); line-height: 1.5; }
+.flist li .b { flex-shrink: 0; margin-top: 1px; }
+.forwho-col.is .b { color: var(--green); }
+.forwho-col.not .b { color: var(--red); }
+
+/* TESTI */
+.testi-grid { display: grid; gap: 14px; }
+.testi-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 22px; }
+.testi-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.testi-av {
+  width: 44px; height: 44px; border-radius: 50%;
+  background: var(--red-dim); border: 1px solid rgba(229,57,53,.25);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 900; font-size: 14px; color: var(--red); flex-shrink: 0;
+}
+.testi-name { font-size: 14px; font-weight: 700; }
+.testi-role { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.testi-stars { color: #f5c518; font-size: 13px; margin-bottom: 8px; }
+.testi-text { font-size: 14px; color: var(--label); line-height: 1.7; font-style: italic; }
+
+/* ABOUT */
+.about-section { text-align: center; }
+.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 28px; }
+@media (max-width: 480px) { .stats-row { grid-template-columns: 1fr; } }
+.stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 20px 12px; }
+.stat-n { font-size: 28px; font-weight: 900; color: var(--green); line-height: 1; margin-bottom: 6px; }
+.stat-l { font-size: 12px; color: var(--muted); }
+.about-text { font-size: 15px; color: var(--label); line-height: 1.75; max-width: 520px; margin: 0 auto; }
+.about-text strong { color: var(--text); }
+
+/* CTA FINAL — scroll up para o form */
+.cta-final { text-align: center; padding: 52px 20px 60px; max-width: 720px; margin: 0 auto; }
+.cta-final h2 { margin-bottom: 10px; }
+.cta-final p { font-size: 15px; color: var(--muted); margin-bottom: 28px; }
+
+.btn-scroll {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--green); color: #111;
+  font-family: var(--font); font-weight: 700; font-size: 16px;
+  padding: 17px 36px; border-radius: 12px; text-decoration: none; border: none; cursor: pointer;
+  box-shadow: 0 4px 24px var(--green-glow);
+  transition: transform .15s, box-shadow .15s; max-width: 420px; width: 100%;
+}
+.btn-scroll:hover { transform: translateY(-2px); box-shadow: 0 6px 36px var(--green-glow); }
+
+/* FOOTER */
+footer { border-top: 1px solid var(--border); padding: 24px 20px; text-align: center; font-size: 12px; color: var(--muted); }
+footer strong { color: var(--label); }
+
+/* ANIMATIONS */
+@keyframes fadeUp { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
+.reveal { opacity:0; transform:translateY(22px); transition: opacity .55s ease, transform .55s ease; }
+.reveal.visible { opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="countdown">
+    <div class="cdot"></div>
+    <span>Aula em:&nbsp;</span>
+    <span class="ctimer" id="timer">--:--:--</span>
+  </div>
+</div>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-inner">
+    <div class="urgency-tag">⚡ Aula gratuita &nbsp;·&nbsp; Vagas limitadas &nbsp;·&nbsp; Ao vivo</div>
+    <!-- EDITAR: data -->
+    <div class="date-badge">📅 23 de Fevereiro · Domingo · 12h00 (horário de Brasília)</div>
+    <!-- EDITAR: headline -->
+    <h1>Seu negócio fatura, mas<br><span class="red">o crescimento travou.</span></h1>
+    <!-- EDITAR: subheadline -->
+    <p class="hero-sub">
+      Nessa aula ao vivo você vai descobrir <strong>como montar uma máquina comercial previsível</strong> — sem depender de indicação e sem ser você o único vendedor da empresa.
+    </p>
+  </div>
+</div>
+
+<!-- FORMULÁRIO -->
+<div class="form-section" id="form-section">
+  <div class="form-card">
+    <div class="form-title">Garanta sua vaga gratuita</div>
+    <!-- EDITAR: subtítulo -->
+    <div class="form-subtitle">Preencha os dados abaixo para garantir o seu acesso</div>
+    <div class="respondi-wrap" id="respondi-wrap">
+      <div data-respondi-container="" data-respondi-mode="regular" data-respondi-src="https://form.respondi.app/JlylO3Xj" data-respondi-width="100%" data-respondi-height="580px"></div>
+      <script>const bodyScript=document.querySelector('body'),hasScript=document.querySelector('#respondi_src');if(!hasScript){const script=document.createElement('script');script.setAttribute("async","");document.body.appendChild(script);script.id='respondi_src';script.src='https://embed.respondi.app/embed.js';}</script>
+    </div>
+    <div class="microcopy" id="microcopy">
+      <span>100% gratuito</span><span>Sem spam</span><span>Cancele quando quiser</span>
+    </div>
+  </div>
+</div>
+
+<!-- OBRIGADO + BOTÃO WHATSAPP (oculto até envio) -->
+<div class="thankyou-section" id="thankyou" style="padding: 24px 20px 52px;">
+  <div class="thankyou-box">
+    <div class="check-icon">✅</div>
+    <!-- EDITAR: mensagem de confirmação -->
+    <div class="thankyou-title">Inscrição confirmada!</div>
+    <p class="thankyou-sub">
+      Boa! Sua vaga está garantida para <strong>23 de Fevereiro às 12h00</strong>.<br>
+      Agora entre no grupo do WhatsApp — é lá que você vai receber o link da aula e os avisos.
+    </p>
+    <a class="btn-wa-big" href="https://chat.whatsapp.com/Iwi10qePQ49G6L6Z9wo7KU" target="_blank" rel="noopener">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Entrar no grupo do WhatsApp agora
+    </a>
+    <p class="wa-hint">👆 O link da aula será enviado por aqui no dia 23</p>
+  </div>
+</div>
+
+<div class="divline"></div>
+
+<!-- O QUE VAI APRENDER -->
+<section class="reveal">
+  <div class="stag">Conteúdo da aula</div>
+  <!-- EDITAR: título -->
+  <h2>O que você vai <span class="green">aprender e aplicar</span></h2>
+  <div class="learn-grid">
+    <!-- EDITAR: blocos -->
+    <div class="learn-card">
+      <div class="learn-icon">🗺️</div>
+      <div>
+        <div class="learn-title">Como estruturar um processo comercial do zero</div>
+        <div class="learn-desc">Você vai sair com um mapa claro de cada etapa do seu funil — do primeiro contato até o fechamento — sem depender de intuição ou improviso.</div>
+      </div>
+    </div>
+    <div class="learn-card">
+      <div class="learn-icon">🎯</div>
+      <div>
+        <div class="learn-title">Por que seus leads não estão convertendo</div>
+        <div class="learn-desc">Os 3 erros mais comuns que fazem boas oportunidades evaporarem no meio do caminho — e o que fazer para reativar o pipeline parado.</div>
+      </div>
+    </div>
+    <div class="learn-card">
+      <div class="learn-icon">⚙️</div>
+      <div>
+        <div class="learn-title">Como tirar a venda das suas costas</div>
+        <div class="learn-desc">O passo a passo para construir um time que vende sem você — com metas, cadência e previsibilidade de resultado todo mês.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divline" style="margin-top:0;"></div>
+
+<!-- PARA QUEM É -->
+<div class="forwho-wrap reveal">
+  <div class="forwho-inner">
+    <div class="stag">Fit da aula</div>
+    <h2>Para quem é <span class="green">essa aula?</span></h2>
+    <div class="forwho-grid">
+      <div class="forwho-col is">
+        <h3>✅ É para você se…</h3>
+        <ul class="flist">
+          <!-- EDITAR -->
+          <li><span class="b">→</span> Você é dono de PME e ainda é o principal vendedor</li>
+          <li><span class="b">→</span> Seu faturamento oscila todo mês sem previsibilidade</li>
+          <li><span class="b">→</span> Você tem leads chegando mas a conversão está baixa</li>
+          <li><span class="b">→</span> Quer escalar mas não sabe por onde começar no comercial</li>
+          <li><span class="b">→</span> É gestor comercial e quer estruturar melhor o time</li>
+        </ul>
+      </div>
+      <div class="forwho-col not">
+        <h3>🚫 Não é para você se…</h3>
+        <ul class="flist">
+          <li><span class="b">→</span> Está começando do zero sem nenhum cliente ainda</li>
+          <li><span class="b">→</span> Busca atalhos sem disposição para executar</li>
+          <li><span class="b">→</span> Atua no B2C com ticket baixo e volume massivo</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="divline" style="margin-top:0;"></div>
+
+<!-- DEPOIMENTOS -->
+<section class="reveal">
+  <div class="stag">Depoimentos</div>
+  <h2>Quem já passou pela <span class="green">Branches</span></h2>
+  <div class="testi-grid">
+    <!-- EDITAR: substituir pelos reais -->
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-header">
+        <div class="testi-av">RM</div>
+        <div><div class="testi-name">Rafael Mendonça</div><div class="testi-role">CEO · Agência de Marketing Digital</div></div>
+      </div>
+      <div class="testi-text">"Em 3 meses de implementação dobramos o número de reuniões qualificadas. Hoje temos um funil claro e resultado previsível todo mês."</div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-header">
+        <div class="testi-av">CS</div>
+        <div><div class="testi-name">Camila Souza</div><div class="testi-role">Fundadora · Consultoria de RH</div></div>
+      </div>
+      <div class="testi-text">"Eu era a única pessoa que vendia. Depois da estruturação, contratei dois SDRs e replicamos meu volume em 4 meses. Consegui finalmente trabalhar no negócio."</div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <div class="testi-header">
+        <div class="testi-av">LP</div>
+        <div><div class="testi-name">Lucas Pinheiro</div><div class="testi-role">Diretor Comercial · SaaS B2B</div></div>
+      </div>
+      <div class="testi-text">"Em 6 semanas: CRM, cadências e relatório semanal. Saímos de R$80k para R$140k/mês de ARR novo em 90 dias."</div>
+    </div>
+  </div>
+</section>
+
+<div class="divline" style="margin-top:0;"></div>
+
+<!-- SOBRE -->
+<section class="about-section reveal">
+  <div class="stag">Sobre a Branches</div>
+  <h2>Implementação real.<br><span class="green">Resultado mensurável.</span></h2>
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-n">5+</div><div class="stat-l">anos de operação</div></div>
+    <div class="stat-box"><div class="stat-n">60+</div><div class="stat-l">empresas atendidas</div></div>
+    <div class="stat-box"><div class="stat-n">R$500M+</div><div class="stat-l">em negociações geradas</div></div>
+  </div>
+  <!-- EDITAR: texto -->
+  <p class="about-text">
+    A Branches Performance não entrega slides e frameworks teóricos. <strong>A gente entra na operação</strong>, estrutura o processo comercial, capacita o time e acompanha os indicadores até o resultado aparecer no faturamento. Implementação, não consultoria.
+  </p>
+</section>
+
+<div class="divline" style="margin-top:0;"></div>
+
+<!-- CTA FINAL -->
+<div class="cta-final reveal">
+  <h2>A fórmula para destravar o seu comercial.<br><span class="green">Acesso gratuito e limitado!.</span></h2>
+  <p>23/02 (Segunda) · 12h00 · Ao vivo · 100% gratuito</p>
+  <button class="btn-scroll" onclick="document.getElementById('form-section').scrollIntoView({behavior:'smooth'})">
+    ↑ Quero garantir minha vaga
+  </button>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <!-- EDITAR: nome legal -->
+  <strong>Branches Performance</strong> &nbsp;·&nbsp; Todos os direitos reservados © 2025
+</footer>
+
+<script>
+  // ── COUNTDOWN para 23/02/2026 às 12h00 Brasília ──
+  const AULA = new Date('2026-02-23T12:00:00-03:00');
+  function updateTimer() {
+    const diff = AULA - new Date();
+    if (diff <= 0) { document.getElementById('timer').textContent = '🔴 Ao vivo!'; return; }
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000).toString().padStart(2,'0');
+    const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0');
+    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
+    document.getElementById('timer').textContent = d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`;
+  }
+  updateTimer();
+  setInterval(updateTimer, 1000);
+
+  // ── DETECTAR ENVIO DO FORMULÁRIO RESPONDI ──
+  // Respondi envia um postMessage quando o formulário é concluído
+  window.addEventListener('message', function(e) {
+    const data = e.data;
+    // Verifica diferentes padrões de evento que o Respondi pode enviar
+    const isComplete =
+      (typeof data === 'string' && (data.includes('complete') || data.includes('submit') || data.includes('finish'))) ||
+      (typeof data === 'object' && data !== null && (
+        data.type === 'respondi:complete' ||
+        data.type === 'form:complete' ||
+        data.type === 'submit' ||
+        data.event === 'complete' ||
+        data.status === 'complete' ||
+        data.completed === true
+      ));
+
+    if (isComplete) {
+      showThankYou();
+    }
+  });
+
+  function showThankYou() {
+    // Esconde o formulário e o microcopy
+    const formCard = document.querySelector('.form-card');
+    const thankyou = document.getElementById('thankyou');
+
+    // Anima saída do form
+    formCard.style.transition = 'opacity .3s ease, transform .3s ease';
+    formCard.style.opacity = '0';
+    formCard.style.transform = 'translateY(-10px)';
+
+    setTimeout(() => {
+      formCard.style.display = 'none';
+      thankyou.style.display = 'block';
+      // Scroll suave até o bloco de obrigado
+      thankyou.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 300);
+  }
+
+  // ── FALLBACK: botão manual para testar (remover em produção) ──
+  // Para testar o fluxo localmente, descomente a linha abaixo:
+  // setTimeout(showThankYou, 3000);
+
+  // ── SCROLL REVEAL ──
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+  }, { threshold: 0.08 });
+  document.querySelectorAll('.reveal').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>
